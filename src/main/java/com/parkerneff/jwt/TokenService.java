@@ -14,7 +14,7 @@ public class TokenService {
     @Getter @Setter private String issuer = null;
     @Getter @Setter private String audience = null;
     @Getter @Setter private int expireInMin = 60;
-    @Getter @Setter private Map<String, KeyPair> keyMap;
+    @Getter @Setter private Map<String, PrivateKey> privateKeyMap;
 
     public String generateToken(JwtRequest jwtRequest) {
         try {
@@ -45,7 +45,7 @@ public class TokenService {
             jws.setPayload(claims.toJson());
 
             // The JWT is signed using the private key
-            jws.setKey(keyMap.get("k1").getPrivate());
+            jws.setKey(privateKeyMap.get("k1"));
 
             // Set the Key ID (kid) header because it's just the polite thing to do.
             // We only have one key in this example but a using a Key ID helps

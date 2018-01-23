@@ -1,0 +1,5 @@
+issuer: parkerneff.com
+
+keystore:
+  file: jwkkeys.jks
+  password: password

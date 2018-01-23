@@ -7,6 +7,7 @@ import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.lang.JoseException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,10 +21,9 @@ public class JwtController {
     // https://connect2id.com/products/nimbus-jose-jwt/examples/jwt-with-rsa-signature
 // https://github.com/jwtk/jjwt
     @Autowired
-    private PrivateKey privateKey;
+    private KeyInfo keyInfo;
+    @Value("${issuer}") String issuer;
 
-    @Autowired
-    private JsonWebKeySet jsonWebKeySet;
 
     @RequestMapping(value = "/token", method = RequestMethod.POST)
     public String generateToken(@RequestBody JwtRequest jwtRequest) {
@@ -35,8 +35,8 @@ public class JwtController {
 
             // Create the Claims, which will be the content of the JWT
             JwtClaims claims = new JwtClaims();
-            claims.setIssuer("parker-idp");  // who creates the token and signs it
-            claims.setAudience("Audience"); // to whom the token is intended to be sent
+            claims.setIssuer(issuer);  // who creates the token and signs it
+            claims.setAudience(jwtRequest.getClient()); // to whom the token is intended to be sent
             claims.setExpirationTimeMinutesInTheFuture(60); // time when the token will expire (10 minutes from now)
             claims.setGeneratedJwtId(); // a unique identifier for the token
             claims.setIssuedAtToNow();  // when the token was issued/created (now)
@@ -54,12 +54,12 @@ public class JwtController {
             jws.setPayload(claims.toJson());
 
             // The JWT is signed using the private key
-            jws.setKey(privateKey);
+            jws.setKey(keyInfo.getPrivateKeyMap().get("k1")); // TODO Randomize this
 
             // Set the Key ID (kid) header because it's just the polite thing to do.
             // We only have one key in this example but a using a Key ID helps
             // facilitate a smooth key rollover process
-        //    jws.setKeyIdHeaderValue(rsaJsonWebKey.getKeyId());
+            jws.setKeyIdHeaderValue("k1"); // TODO Randomize this
 
             // Set the signature algorithm on the JWT/JWS that will integrity protect the claims
             jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
@@ -83,7 +83,7 @@ public class JwtController {
 
     @RequestMapping("/jwks")
     public String getJwk() {
-        return jsonWebKeySet.toJson();
+        return keyInfo.getJsonWebKeySet().toJson();
 
     }
 

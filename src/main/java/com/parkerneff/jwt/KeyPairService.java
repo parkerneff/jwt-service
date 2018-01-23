@@ -5,6 +5,9 @@ import lombok.Setter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.jose4j.jwk.JsonWebKeySet;
+import org.jose4j.jwk.PublicJsonWebKey;
+import org.jose4j.jwk.RsaJsonWebKey;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
@@ -17,13 +20,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class KeyPairService {
-    @Getter @Setter private String keyStoreFile;
-    @Getter @Setter private String keyStorePassword;
+    @Getter
+    @Setter
+    private String keyStoreFile;
+    @Getter
+    @Setter
+    private String keyStorePassword;
 
     private Log log = LogFactory.getLog(KeyPairService.class);
 
-    public Map<String, KeyPair> getKeyPairs() {
-            Map<String, KeyPair> keyMap = new LinkedHashMap<>();
+    public KeyInfo getKeyInfo() {
+        Map<String, PrivateKey> privateKeyMap = new LinkedHashMap<>();
+        JsonWebKeySet jsonWebKeySet = new JsonWebKeySet();
 
 
         try {
@@ -37,21 +45,22 @@ public class KeyPairService {
                 log.info("key=" + alias);
                 try {
                     Key key = keyStore.getKey(alias, "password".toCharArray());
-                    if (key instanceof  PrivateKey) {
+                    if (key instanceof PrivateKey) {
                         Certificate cert = keyStore.getCertificate(alias);
                         PublicKey publicKey = cert.getPublicKey();
-                        keyMap.put(alias, new KeyPair(publicKey, (PrivateKey)key));
+                        RsaJsonWebKey rsaJwk = (RsaJsonWebKey) PublicJsonWebKey.Factory.newPublicJwk(publicKey);
+                        rsaJwk.setKeyId(alias);
+                        jsonWebKeySet.addJsonWebKey(rsaJwk);
+                        privateKeyMap.put(alias, (PrivateKey) key);
 
                     }
-
-
 
 
                 } catch (UnrecoverableKeyException e) {
                     e.printStackTrace();
                 }
             }
-            return  keyMap;
+            return new KeyInfo(jsonWebKeySet, privateKeyMap);
         } catch (Exception e) {
             log.fatal(e.getMessage());
 
